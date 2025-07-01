@@ -1,0 +1,13 @@
+{
+    "name": "@qf/lib",
+    "version": "1.0.0",
+    "dependencies": {
+        "@netlify/functions": "^4.1.8",
+        "@types/node": "^24.0.10",
+        "amqplib": "^0.10.8",
+        "typescript": "^5.8.3"
+    },
+    "devDependencies": {
+        "@types/amqplib": "^0.10.7"
+    }
+}

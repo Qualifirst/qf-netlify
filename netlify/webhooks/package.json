@@ -1,0 +1,7 @@
+{
+    "name": "@qf/qfn-webhooks",
+    "version": "1.0.0",
+    "dependencies": {
+        "@qf/lib": "file:./../../shared/qflib"
+    }
+}

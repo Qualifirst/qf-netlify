@@ -1,0 +1,7 @@
+{
+    "name": "@qf/qfn-shopify-odoo",
+    "version": "1.0.0",
+    "dependencies": {
+        "@qf/lib": "file:./../../shared/qflib"
+    }
+}
