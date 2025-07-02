@@ -12,6 +12,7 @@ async function handler(request: Request, context: AppContext): Promise<Response>
   }
   const s = new ShopifyOdoo(context);
   const res = await s.shopifyCompanyToOdoo(gId);
+  console.log(`CompanyLocation ${gId} ${JSON.stringify(res)}`);
   return NetlifyResponse(200, res);
 }
 

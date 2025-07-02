@@ -6,11 +6,13 @@ import { OdooDataManagerMiddleware } from '../../../shared/qflib/odoo/dataManage
 
 async function handler(request: Request, context: AppContext): Promise<Response> {
   const data = await request.json();
-  if (!data.admin_graphql_api_id) {
+  const gId = data.admin_graphql_api_id;
+  if (!gId) {
     throw new Error("order Admin API ID not in request body");
   }
   const s = new ShopifyOdoo(context);
-//   const res = await s.shopifyCustomerToOdoo(data.admin_graphql_api_id);
+//   const res = await s.shopifyCustomerToOdoo(gId);
+//   console.log(`Customer ${gId} ${JSON.stringify(res)}`);
   return NetlifyResponse(200, "OK");
 }
 

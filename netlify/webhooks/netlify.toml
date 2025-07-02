@@ -1,3 +1,6 @@
 [build]
   base = "netlify/webhooks"
   functions = "functions"
+[dev]
+  port = 8881
+  staticServerPort = 4001

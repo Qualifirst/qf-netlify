@@ -13,6 +13,7 @@ async function handler(request: Request, context: AppContext): Promise<Response>
     await request.text(),
     {
       'X-Shopify-Topic': topic,
+      'Content-Type': 'application/json',
     },
   );
   return NetlifyResponse(200, "OK");

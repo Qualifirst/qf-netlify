@@ -2,9 +2,6 @@
     "name": "@qf/qfn-shopify-odoo",
     "version": "1.0.0",
     "dependencies": {
-        "@netlify/functions": "^3.1.10",
-        "@qf/lib": "file:./../../shared/qflib",
-        "@types/node": "^22.16.0",
-        "typescript": "^4.9.5"
+        "@qf/lib": "file:./../../shared/qflib"
     }
 }
