@@ -5,7 +5,7 @@ export interface AppContext extends Context {
     cache: Map<string, any>;
 }
 
-type NetlifyFunction = (request: Request, context: AppContext) => Promise<Response>;
+export type NetlifyFunction = (request: Request, context: AppContext) => Promise<Response>;
 
 export async function AuthMiddleware(handler: Promise<NetlifyFunction>): Promise<NetlifyFunction> {
     return async (request: Request, context: AppContext): Promise<Response> => {
@@ -41,7 +41,6 @@ export async function EnvCheckMiddleware(handler: Promise<NetlifyFunction>): Pro
 export async function CacheMiddleware(handler: Promise<NetlifyFunction>): Promise<NetlifyFunction> {
     return async (request: Request, context: AppContext): Promise<Response> => {
         context.cache = new Map<string, any>();
-        context.cache.set('something', 'else');
 
         return await (await handler)(request, context);
     }

@@ -1,4 +1,4 @@
-import { Context, Config } from '@netlify/functions'
+import { Config } from '@netlify/functions'
 import { PublishMessage } from '../../../../shared/qflib/rabbitmq/rabbitmq'
 import { ValidateWebhook } from '../../../../shared/qflib/shopify/shopify'
 import { AppContext, EnvCheckMiddleware, ErrorHandlerMiddleware } from '../../../../shared/qflib/app/middleware'
