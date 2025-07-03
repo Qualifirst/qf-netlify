@@ -16,6 +16,21 @@ type Edges<T> = {
     edges?: Edge<T>[];
 }
 
+type KeyVal = {
+    key: string
+    value: string
+}
+
+type Money = {
+    amount: string
+    currencyCode: string
+}
+
+type MoneyBag = {
+    shopMoney: Money
+    presentmentMoney: Money
+}
+
 export class ShopifyAddress {
     id: string;
     name: string;
@@ -101,4 +116,56 @@ export type Company = {
     mainContact: CompanyContact;
     locationsCount: Count;
     locations?: Edges<CompanyLocation>;
+}
+
+export type OrderTaxLine = {
+    priceSet: MoneyBag;
+    ratePercentage: number;
+    title: string;
+}
+
+export type OrderLine = {
+    id: string;
+    name: string;
+    sku: string;
+    currentQuantity: number;
+    unitPriceSet: MoneyBag;
+    taxLines: OrderTaxLine[];
+}
+
+export type OrderShippingLine = {
+    id: string;
+    title: string;
+    carrierIdentifier: string;
+    code: string;
+    deliveryCategory: string;
+    source: string;
+    priceSet: MoneyBag;
+    taxLines: OrderTaxLine[];
+}
+
+export type OrderTransaction = {
+    id: string;
+    kind: string;
+    status: string;
+    parentTransaction?: OrderTransaction;
+    amountSet: MoneyBag;
+    totalUnsettledSet: MoneyBag;
+    authorizationExpiresAt: string;
+}
+
+export type Order = {
+    id: string;
+    name: string;
+    customer: Customer;
+    customAttributes: KeyVal[];
+    createdAt: string;
+    statusPageUrl: string;
+    billingAddress: MailingAddress;
+    shippingAddress: MailingAddress;
+    deliveryInstructions?: KeyVal;
+    purchaseOrder?: KeyVal;
+    lines: Edges<OrderLine>;
+    shippingLine: OrderShippingLine;
+    transactions: OrderTransaction[];
 }

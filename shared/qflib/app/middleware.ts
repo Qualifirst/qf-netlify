@@ -1,14 +1,12 @@
-import { Context } from '@netlify/functions';
+import { Context as NContext } from '@netlify/functions';
 import { NetlifyResponse } from './app';
 
-export interface AppContext extends Context {
-    cache: Map<string, any>;
-}
+export interface Context extends NContext {}
 
-export type NetlifyFunction = (request: Request, context: AppContext) => Promise<Response>;
+export type NetlifyFunction = (request: Request, context: Context) => Promise<Response>;
 
 export async function AuthMiddleware(handler: Promise<NetlifyFunction>): Promise<NetlifyFunction> {
-    return async (request: Request, context: AppContext): Promise<Response> => {
+    return async (request: Request, context: Context): Promise<Response> => {
         const authKey = process.env.AUTH_KEY;
         const headerKey = request.headers.get('authorization');
         if (!authKey || !headerKey || `Bearer ${authKey}` !== headerKey) {
@@ -19,7 +17,7 @@ export async function AuthMiddleware(handler: Promise<NetlifyFunction>): Promise
 }
 
 export async function ErrorHandlerMiddleware(handler: Promise<NetlifyFunction>): Promise<NetlifyFunction> {
-    return async (request: Request, context: AppContext): Promise<Response> => {
+    return async (request: Request, context: Context): Promise<Response> => {
         try {
             return await (await handler)(request, context);
         } catch (error) {
@@ -30,18 +28,10 @@ export async function ErrorHandlerMiddleware(handler: Promise<NetlifyFunction>):
 }
 
 export async function EnvCheckMiddleware(handler: Promise<NetlifyFunction>): Promise<NetlifyFunction> {
-    return async (request: Request, context: AppContext): Promise<Response> => {
+    return async (request: Request, context: Context): Promise<Response> => {
         if (process.env.ENV && (process.env.ENV_DISABLE || '').includes(process.env.ENV!)) {
             return NetlifyResponse(500, {error: 'environment is disabled'});
         }
-        return await (await handler)(request, context);
-    }
-}
-
-export async function CacheMiddleware(handler: Promise<NetlifyFunction>): Promise<NetlifyFunction> {
-    return async (request: Request, context: AppContext): Promise<Response> => {
-        context.cache = new Map<string, any>();
-
         return await (await handler)(request, context);
     }
 }

@@ -7,3 +7,11 @@ export function NetlifyResponse(status: number, content?: any, headers?: any): R
       headers,
     })
 }
+
+export class WithCache {
+    cache: Map<string, any>;
+
+    constructor(cache?: Map<string, any>) {
+        this.cache = cache || new Map<string, any>();
+    }
+}

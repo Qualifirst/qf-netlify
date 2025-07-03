@@ -2,6 +2,10 @@
     "name": "@qf/qfn-shopify-odoo",
     "version": "1.0.0",
     "dependencies": {
-        "@qf/lib": "file:./../../shared/qflib"
+        "@date-fns/utc": "^2.1.0",
+        "@netlify/async-workloads": "^0.0.100",
+        "@qf/lib": "file:./../../shared/qflib",
+        "date-fns": "^4.1.0",
+        "date-fns-tz": "^3.2.0"
     }
 }

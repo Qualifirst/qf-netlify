@@ -1,16 +1,10 @@
-import { AppContext } from "../../app/middleware";
-import { CompanyQuery, CustomerQuery, ShopifyAdminAPIQuery } from "./queries";
-import { Company, Customer } from "./types";
+import { WithCache } from "../../app/app";
+import { CompanyQuery, CustomerQuery, OrderQuery, OrderWithLinesQuery, OrderWithTransactionsQuery, ShopifyAdminAPIQuery } from "./queries";
+import { Company, Customer, Order } from "./types";
 
-export class ShopifyAdminAPI {
-    private ctx: AppContext;
-
-    constructor(ctx: AppContext) {
-        this.ctx = ctx;
-    }
-
+export class ShopifyAdminAPI extends WithCache {
     private async GraphQL(query: ShopifyAdminAPIQuery, variables: any) {
-        const domainKey: string = this.ctx.cache.get('ShopifyDomainKey') || 'FM';
+        const domainKey: string = this.cache.get('ShopifyDomainKey') || 'FM';
         const domain = process.env[`SHOPIFY_DOMAIN_${domainKey}`];
         const token = process.env[`SHOPIFY_ADMIN_API_ACCESS_TOKEN_${domainKey}`];
         if (!domain || !token) {
@@ -51,6 +45,21 @@ export class ShopifyAdminAPI {
 
     async CompanyById(shopifyId: string): Promise<Company> {
         const res: Company = await this.GraphQL(CompanyQuery, {'id': shopifyId});
+        return res;
+    }
+
+    async OrderById(shopifyId: string): Promise<Order> {
+        const res: Order = await this.GraphQL(OrderQuery, {'id': shopifyId});
+        return res;
+    }
+
+    async OrderWithLinesById(shopifyId: string): Promise<Order> {
+        const res: Order = await this.GraphQL(OrderWithLinesQuery, {'id': shopifyId});
+        return res;
+    }
+
+    async OrderWithTransactionsById(shopifyId: string): Promise<Order> {
+        const res: Order = await this.GraphQL(OrderWithTransactionsQuery, {'id': shopifyId});
         return res;
     }
 }

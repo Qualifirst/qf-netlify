@@ -1,3 +1,16 @@
+export type OdooCompany = {
+    id: number
+    code: string
+}
+export const COMPANY_QF: OdooCompany = {
+    id: 2,
+    code: 'QF',
+}
+export const COMPANY_FM: OdooCompany = {
+    id: 3,
+    code: 'FM',
+}
+
 export const Command = {
     Create(values: {[key: string]: any}): any[] {
 	    return [0, 0, values];

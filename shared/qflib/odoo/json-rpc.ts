@@ -1,10 +1,15 @@
-import { AppContext } from "../app/middleware";
+import { WithCache } from "../app/app";
+import { getOdooData } from "./dataManager";
 
 class OdooModel {
     id: number
 
-    constructor(data: {[key: string]: any}) {
-        Object.assign(this, data);
+    static fromValues<T extends OdooModel>(model: { new (...args: any[]): T }, values: {[key: string]: any}): T {
+        const o = new model();
+        for (const key of Object.keys(o)) {
+            o[key] = values[key];
+        }
+        return o;
     }
 }
 
@@ -14,23 +19,32 @@ class IrModelData extends OdooModel {
     name: string
     res_id: number
 
-    constructor(data: {[key: string]: any}) {
-        super(data);
-        Object.assign(this, data);
+    static build(model: string, xid: string, res_id?: number) {
+        const [xidModule, xidName] = xid.split('.');
+        return OdooModel.fromValues(IrModelData, {
+            model: model,
+            module: xidModule,
+            name: xidName,
+            res_id: res_id,
+        });
     }
 
     xid() {
         return `${this.module}.${this.name}`;
     }
+
+    asObject() {
+        return {
+            model: this.model,
+            module: this.module,
+            name: this.name,
+            res_id: this.res_id,
+            xid: this.xid(),
+        };
+    }
 }
 
-export class OdooJsonRPC {
-    private ctx: AppContext;
-
-    constructor(ctx: AppContext) {
-        this.ctx = ctx;
-    }
-
+export class OdooJsonRPC extends WithCache {
     private async jsonRpc(service: string, method: string, args: any[]) {
         const db = process.env.ODOO_DB;
         const uid = process.env.ODOO_USER_ID;
@@ -77,7 +91,7 @@ export class OdooJsonRPC {
 
     async jsonRpcExecuteKw(model: string, method: string, args?: any[], kwargs?: {[key: string]: any}) {
         kwargs = kwargs || {};
-        kwargs['context'] = Object.assign(kwargs['context'] || {}, this.ctx.cache.get('OdooContext') || {});
+        kwargs['context'] = Object.assign(kwargs['context'] || {}, this.cache.get('OdooContext') || {});
         kwargs['context']['netlify'] = true;
         return this.jsonRpc('object', 'execute_kw', [model, method, args, kwargs]);
     }
@@ -91,28 +105,36 @@ export class OdooJsonRPC {
         });
     }
 
+    async prefetchIrModelData(xids: IrModelData[]): Promise<{[key: string]: IrModelData}> {
+        const cacheKey = (xid: string) => `IrModelData.FromOdoo.${xid}`;
+        const searchXids = xids.filter((xid) => !this.cache.has(cacheKey(xid.xid()))).map((xid) => xid.asObject());
+        const res = await this.jsonRpcExecuteKw('ir.actions.server', 'run', [getOdooData()!.actions.get_xids], {context: {xids: searchXids}});
+        if (!res.response) {
+            throw new Error(`empty response fetching Odoo XIDs`);
+        }
+        for (const imdData of res.response) {
+            if (imdData.error) {
+                throw new Error(`xid error for ${imdData.module}.${imdData.name}: ${imdData.error}`);
+            }
+            const imd = OdooModel.fromValues(IrModelData, imdData);
+            this.cache.set(cacheKey(imd.xid()), imd);
+        }
+        const imds = {};
+        for (const xid of xids) {
+            imds[xid.xid()] = this.cache.get(cacheKey(xid.xid()));
+        }
+        return imds;
+    }
+
     async searchIrModelData(model: string, xid: string): Promise<IrModelData | undefined> {
         const cacheKey = `IrModelData.${model}.${xid}`;
-        if (this.ctx.cache.has(cacheKey)) {
-            return this.ctx.cache.get(cacheKey);
+        if (this.cache.has(cacheKey)) {
+            return this.cache.get(cacheKey);
         }
-        const [xidModule, xidName] = xid.split('.');
-        const domain = [
-            ['module', '=', xidModule],
-            ['name', '=', xidName],
-        ];
-        const res = await this.searchRead('ir.model.data', domain, ['id', 'module', 'name', 'model', 'res_id']);
-        if (res.length > 1) {
-            throw new Error(`ir.model.data search expected at most 1 match for xid ${xid}, got ${res.length}`);
+        const imd = (await this.prefetchIrModelData([IrModelData.build(model, xid)]))[xid];
+        if (imd) {
+            this.cache.set(cacheKey, imd);
         }
-        if (!res.length) {
-            return undefined;
-        }
-        const imd = new IrModelData(res[0]);
-        if (imd.model !== model) {
-            throw new Error(`model mismatch for xid ${xid}, expected ${model}, got ${imd.model}`);
-        }
-        this.ctx.cache.set(cacheKey, imd);
         return imd;
     }
 
@@ -143,12 +165,12 @@ export class OdooJsonRPC {
             name: xidName,
         };
         const imdId = await this.jsonRpcExecuteKw('ir.model.data', 'create', [imdData]);
-        const imd = new IrModelData({
+        const imd = OdooModel.fromValues(IrModelData, {
             id: imdId,
             ...imdData,
         });
         const cacheKey = `IrModelData.${model}.${xid}`;
-        this.ctx.cache.set(cacheKey, imd);
+        this.cache.set(cacheKey, imd);
     }
 
     async write(model: string, ids: number[], data: {[key: string]: any}, odooContext?: {[key: string]: any}) {

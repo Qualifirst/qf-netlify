@@ -1,4 +1,4 @@
-import { AppContext, NetlifyFunction } from "../app/middleware";
+import { Context, NetlifyFunction } from "../app/middleware";
 
 var loading: Promise<boolean> | undefined;
 var lastFetch: number = 0;
@@ -67,12 +67,21 @@ type OdooData = {
             }
         }
     }
+    currencies: {[key: string]: number},
 }
 
-export var odooData: OdooData | undefined;
+var odooData: OdooData | undefined;
+
+export function getOdooData(): OdooData | undefined {
+    return odooData;
+}
+
+export function setOdooData(data: OdooData | undefined) {
+    odooData = data;
+}
 
 export async function OdooDataManagerMiddleware(handler: Promise<NetlifyFunction>): Promise<NetlifyFunction> {
-    return async (request: Request, context: AppContext): Promise<Response> => {
+    return async (request: Request, context: Context): Promise<Response> => {
         if (loading) {
             await loading;
         }

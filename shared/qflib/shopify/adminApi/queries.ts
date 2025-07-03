@@ -1,5 +1,23 @@
 // FRAGMENTS
 
+const moneyFragment = `
+fragment MoneyFields on MoneyV2 {
+	amount
+	currencyCode
+}
+`
+
+const moneyBagFragment = moneyFragment + `
+fragment MoneyBagFields on MoneyBag {
+    shopMoney {
+        ...MoneyFields
+    }
+    presentmentMoney {
+        ...MoneyFields
+    }
+}
+`
+
 const mailingAddressFragment = `
 fragment MailingAddressFields on MailingAddress {
 	id
@@ -102,6 +120,110 @@ fragment CompanyFields on Company {
 }
 `
 
+const orderFragment = mailingAddressFragment + `
+fragment OrderFields on Order {
+	id
+	name
+	customer {
+		id
+		companyContactProfiles {
+			company {
+				id
+			}
+		}
+	}
+	customAttributes {
+		key
+		value
+	}
+	createdAt
+    statusPageUrl
+	billingAddress {
+		...MailingAddressFields
+	}
+	shippingAddress {
+		...MailingAddressFields
+	}
+	deliveryInstructions: metafield(namespace: "checkoutblocks", key: "delivery_instructions") {
+		value
+	}
+	purchaseOrder: metafield(namespace: "checkoutblocks", key: "purchase_order") {
+		value
+	}
+}
+`
+
+const orderWithLinesFragment = orderFragment + moneyBagFragment + `
+fragment OrderWithLinesFields on Order {
+	...OrderFields
+	lines: lineItems(first: 250) {
+		edges {
+			node {
+				id
+				name
+				sku
+				currentQuantity
+				unitPriceSet: discountedUnitPriceSet {
+					...MoneyBagFields
+				}
+				taxLines {
+					priceSet {
+						...MoneyBagFields
+					}
+					ratePercentage
+					title
+				}
+			}
+		}
+	}
+	shippingLine {
+		id
+		title
+		carrierIdentifier
+		code
+		deliveryCategory
+		source
+		priceSet: discountedPriceSet {
+			...MoneyBagFields
+		}
+		taxLines {
+			priceSet {
+				...MoneyBagFields
+			}
+			ratePercentage
+			title
+		}
+	}
+}
+`
+
+const orderTransactionFragment = moneyBagFragment + `
+fragment OrderTransactionFields on OrderTransaction {
+	id
+	kind
+	status
+	amountSet {
+		...MoneyBagFields
+	}
+	totalUnsettledSet {
+		...MoneyBagFields
+	}
+	authorizationExpiresAt
+}
+`
+
+const orderWithTransactionsFragment = orderTransactionFragment + `
+fragment OrderWithTransactionsFields on Order {
+	id
+	transactions {
+		...OrderTransactionFields
+		parentTransaction {
+			...OrderTransactionFields
+		}
+	}
+}
+`
+
 // QUERIES
 
 export type ShopifyAdminAPIQuery = {
@@ -126,6 +248,39 @@ export const CompanyQuery: ShopifyAdminAPIQuery = {
 query ($id: ID!) {
     company(id: $id) {
         ...CompanyFields
+    }
+}
+    `,
+};
+
+export const OrderQuery: ShopifyAdminAPIQuery = {
+    resultKey: 'order',
+    query: orderFragment + `
+query ($id: ID!) {
+    order(id: $id) {
+        ...OrderFields
+    }
+}
+    `,
+};
+
+export const OrderWithLinesQuery: ShopifyAdminAPIQuery = {
+    resultKey: 'order',
+    query: orderWithLinesFragment + `
+query ($id: ID!) {
+    order(id: $id) {
+        ...OrderWithLinesFields
+    }
+}
+    `,
+};
+
+export const OrderWithTransactionsQuery: ShopifyAdminAPIQuery = {
+    resultKey: 'order',
+    query: orderWithTransactionsFragment + `
+query ($id: ID!) {
+    order(id: $id) {
+        ...OrderWithTransactionsFields
     }
 }
     `,
