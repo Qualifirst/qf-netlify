@@ -2,6 +2,7 @@
     "name": "@qf/qfn-shopify-odoo",
     "version": "1.0.0",
     "dependencies": {
+        "@netlify/async-workloads": "^0.0.100",
         "@qf/lib": "file:./../../shared/qflib"
     }
 }
