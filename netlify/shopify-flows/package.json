@@ -1,0 +1,9 @@
+{
+    "name": "@qf/qfn-shopify-flows",
+    "version": "1.0.0",
+    "dependencies": {
+        "@netlify/async-workloads": "^0.0.100",
+        "@qf/lib": "file:./../../shared/qflib",
+        "country-state-city": "^3.2.1"
+    }
+}

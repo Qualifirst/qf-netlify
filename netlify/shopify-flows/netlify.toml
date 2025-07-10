@@ -1,0 +1,6 @@
+[build]
+  base = "netlify/shopify-flows"
+  functions = "functions"
+[dev]
+  port = 8883
+  staticServerPort = 4003

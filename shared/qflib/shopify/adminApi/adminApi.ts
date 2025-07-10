@@ -1,4 +1,5 @@
 import { WithCache } from "../../app/app";
+import { customerCreateMutation, CustomerInput } from "./mutations";
 import { CompanyQuery, CustomerQuery, OrderQuery, OrderWithLinesQuery, OrderWithTransactionsQuery, ShopifyAdminAPIQuery } from "./queries";
 import { Company, Customer, Order } from "./types";
 
@@ -38,6 +39,8 @@ export class ShopifyAdminAPI extends WithCache {
         return data.data[query.resultKey];
     }
 
+    // Queries
+
     async CustomerById(shopifyId: string): Promise<Customer> {
         const res: Customer = await this.GraphQL(CustomerQuery, {'id': shopifyId});
         return res;
@@ -60,6 +63,21 @@ export class ShopifyAdminAPI extends WithCache {
 
     async OrderWithTransactionsById(shopifyId: string): Promise<Order> {
         const res: Order = await this.GraphQL(OrderWithTransactionsQuery, {'id': shopifyId});
+        return res;
+    }
+
+    // Mutations
+
+    private async mutationWithUserErrors(query: ShopifyAdminAPIQuery, variables: any) {
+        const res = await this.GraphQL(query, variables);
+        if (res.userErrors?.length) {
+            throw new Error(`errors during shopify mutation call: ${JSON.stringify(res.userErrors)}`);
+        }
+        return res;
+    }
+
+    async CustomerCreate(customerInput: CustomerInput): Promise<Customer> {
+        const res: Customer = this.mutationWithUserErrors(customerCreateMutation, {input: customerInput})['customer'];
         return res;
     }
 }
