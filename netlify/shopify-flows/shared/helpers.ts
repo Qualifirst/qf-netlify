@@ -11,7 +11,7 @@ import { Country, State } from 'country-state-city';
 export function countryAndStateCodes(countryName: string, stateName: string): { countryCode: string; stateCode: string } | null {
   // 1. Find the country by its name (case-insensitive search is needed).
   const country = Country.getAllCountries().find(
-    c => c.name.toLowerCase() === countryName.toLowerCase()
+    c => c.name.toLowerCase() === countryName.toLowerCase() || c.isoCode.toLowerCase() === countryName.toLowerCase()
   );
 
   if (!country) {
@@ -20,7 +20,7 @@ export function countryAndStateCodes(countryName: string, stateName: string): { 
 
   // 2. Find the state within that country (also case-insensitive).
   const state = State.getStatesOfCountry(country.isoCode).find(
-    s => s.name.toLowerCase() === stateName.toLowerCase()
+    s => s.name.toLowerCase() === stateName.toLowerCase() || s.isoCode.toLowerCase() === stateName.toLowerCase()
   );
 
   if (!state) {

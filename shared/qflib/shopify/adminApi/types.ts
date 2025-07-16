@@ -92,6 +92,11 @@ export type CompanyContact = {
     isMainContact: boolean;
 }
 
+export type CompanyContactRole = {
+    id: string;
+    name: string;
+}
+
 export type Customer = {
     id: string;
     displayName: string;
@@ -114,6 +119,7 @@ export type Company = {
     name: string;
     note: string;
     mainContact: CompanyContact;
+    contactRoles: Edges<CompanyContactRole>;
     locationsCount: Count;
     locations?: Edges<CompanyLocation>;
 }

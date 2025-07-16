@@ -1,5 +1,5 @@
 import { WithCache } from "../../app/app";
-import { customerCreateMutation, CustomerInput } from "./mutations";
+import { companyContactAssignRoleMutation, CompanyCreateInput, companyCreateMutation, customerCreateMutation, CustomerEmailMarketingConsentInput, customerEmailMarketingConsentUpdateMutation, CustomerInput, MetafieldsSetInput, metafieldsSetMutation, UserError } from "./mutations";
 import { CompanyQuery, CustomerQuery, OrderQuery, OrderWithLinesQuery, OrderWithTransactionsQuery, ShopifyAdminAPIQuery } from "./queries";
 import { Company, Customer, Order } from "./types";
 
@@ -71,13 +71,28 @@ export class ShopifyAdminAPI extends WithCache {
     private async mutationWithUserErrors(query: ShopifyAdminAPIQuery, variables: any) {
         const res = await this.GraphQL(query, variables);
         if (res.userErrors?.length) {
-            throw new Error(`errors during shopify mutation call: ${JSON.stringify(res.userErrors)}`);
+            console.error('errors during shopify mutation call', res.userErrors);
         }
         return res;
     }
 
-    async CustomerCreate(customerInput: CustomerInput): Promise<Customer> {
-        const res: Customer = this.mutationWithUserErrors(customerCreateMutation, {input: customerInput})['customer'];
-        return res;
+    async MetafieldsSet(metafields: MetafieldsSetInput[]) {
+        await this.mutationWithUserErrors(metafieldsSetMutation, {input: metafields});
+    }
+
+    async CustomerCreate(customerInput: CustomerInput): Promise<{customer: Customer, userErrors: UserError[]}> {
+        return await this.mutationWithUserErrors(customerCreateMutation, {input: customerInput});
+    }
+
+    async CustomerEmailMarketingConsentUpdate(customerId: string, emailMarketingConsent: CustomerEmailMarketingConsentInput) {
+        await this.mutationWithUserErrors(customerEmailMarketingConsentUpdateMutation, {input: {customerId, emailMarketingConsent}});
+    }
+
+    async CompanyCreate(companyCreateInput: CompanyCreateInput): Promise<{company: Company, userErrors: UserError[]}> {
+        return await this.mutationWithUserErrors(companyCreateMutation, {input: companyCreateInput});
+    }
+
+    async CompanyContactAssignRole(companyContactId: string, companyContactRoleId: string, companyLocationId: string) {
+        await this.mutationWithUserErrors(companyContactAssignRoleMutation, {companyContactId, companyContactRoleId, companyLocationId});
     }
 }
