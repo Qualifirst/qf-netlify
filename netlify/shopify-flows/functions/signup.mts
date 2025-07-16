@@ -1,6 +1,6 @@
 import { Config } from '@netlify/functions'
 import { NetlifyResponse } from '../../../shared/qflib/app/app';
-import { Context, AuthMiddleware, EnvCheckMiddleware, ErrorHandlerMiddleware } from '../../../shared/qflib/app/middleware';
+import { Context, AuthMiddleware, EnvCheckMiddleware, ErrorHandlerMiddleware, CORSMiddleware } from '../../../shared/qflib/app/middleware';
 import { ShopifyAdminAPI } from '../../../shared/qflib/shopify/adminApi/adminApi';
 import { CustomerEmailMarketingState, CustomerMarketingOptInLevel } from '../../../shared/qflib/shopify/adminApi/mutations';
 import { countryAndStateCodes } from '../shared/helpers';
@@ -9,18 +9,15 @@ type Customer = {
   firstName: string
   lastName: string
   email: string
-  phone: string
   newsletter: boolean
+  title: string
 }
 type Company = {
   name: string
   email: string
   website: string
-  phone: string
   companyType: string
-  otherCompanyType: string
   primaryCuisine: string
-  otherPrimaryCuisine: string
   employees: string
   annualSpend: string
 }
@@ -31,8 +28,9 @@ type Address = {
   zip: string
   country: string
   state: string
-  addressType: string
+  phone: string
   deliveryInstructions: string
+  recipient: string
 }
 type SignupData = {
   formId: string
@@ -42,17 +40,64 @@ type SignupData = {
   address: Address
 }
 
-async function signupCompany(shopify: ShopifyAdminAPI, company: Company, customer: Customer, address: Address) {
-
+async function signupCompany(shopify: ShopifyAdminAPI, company: Company, customer: Customer, address: Address): Promise<Response> {
+  const codes = countryAndStateCodes(address.country, address.state);
+  const addressData = {
+    recipient: address.recipient,
+    address1: address.address1,
+    address2: address.address2,
+    city: address.city,
+    countryCode: codes?.countryCode || '',
+    zoneCode: codes?.stateCode || '',
+    zip: address.zip,
+    phone: address.phone,
+  };
+  const res = await shopify.CompanyCreate({
+    company: {
+      name: company.name,
+    },
+    companyContact: {
+      email: customer.email,
+      firstName: customer.firstName,
+      lastName: customer.lastName,
+      title: customer.title,
+    },
+    companyLocation: {
+      name: company.name,
+      note: address.deliveryInstructions,
+      billingAddress: addressData,
+      shippingAddress: addressData,
+    }
+  });
+  if (res.userErrors?.length > 0) {
+    return NetlifyResponse(500, res);
+  }
+  const location = res.company.locations!.edges![0].node;
+  await shopify.MetafieldsSet([
+    {ownerId: location.id, namespace: 'custom', key: 'email', value: company.email},
+    {ownerId: location.id, namespace: 'custom', key: 'website', value: company.website},
+    {ownerId: location.id, namespace: 'custom', key: 'company_type', value: company.companyType},
+    {ownerId: location.id, namespace: 'custom', key: 'primary_cuisine', value: company.primaryCuisine},
+    {ownerId: location.id, namespace: 'custom', key: 'employees', value: company.employees},
+    {ownerId: location.id, namespace: 'custom', key: 'annual_spend', value: company.annualSpend},
+  ]);
+  const newCustomer = res.company.mainContact.customer;
+  if (customer.newsletter) {
+    await shopify.CustomerEmailMarketingConsentUpdate(newCustomer.id, {
+      marketingOptInLevel: CustomerMarketingOptInLevel.CONFIRMED_OPT_IN,
+      marketingState: CustomerEmailMarketingState.SUBSCRIBED,
+    });
+  }
+  console.log(`signup completed: company=${res.company.id} location=${location.id} customer=${newCustomer.id}`);
+  return NetlifyResponse(200, res);
 }
 
-async function signupIndividual(shopify: ShopifyAdminAPI, customer: Customer, address: Address) {
+async function signupIndividual(shopify: ShopifyAdminAPI, customer: Customer, address: Address): Promise<Response> {
   const codes = countryAndStateCodes(address.country, address.state);
-  shopify.CustomerCreate({
+  const res = await shopify.CustomerCreate({
     firstName: customer.firstName,
     lastName: customer.lastName,
     email: customer.email,
-    phone: customer.phone,
     emailMarketingConsent: {
       marketingOptInLevel: CustomerMarketingOptInLevel.CONFIRMED_OPT_IN,
       marketingState: customer.newsletter ? CustomerEmailMarketingState.SUBSCRIBED : CustomerEmailMarketingState.UNSUBSCRIBED,
@@ -67,30 +112,34 @@ async function signupIndividual(shopify: ShopifyAdminAPI, customer: Customer, ad
         countryCode: codes?.countryCode || '',
         provinceCode: codes?.stateCode || '',
         zip: address.zip,
+        phone: address.phone,
       },
     ],
-  })
+  });
+  if (res.customer?.id) {
+    console.log(`signup completed: customer=${res.customer.id}`);
+  }
+  return NetlifyResponse(res.userErrors?.length > 0 ? 500 : 200, res);
 }
 
-async function processSignup(shopify: ShopifyAdminAPI, signupData: SignupData) {
+async function processSignup(shopify: ShopifyAdminAPI, signupData: SignupData): Promise<Response> {
   if (signupData.isCompany) {
     return await signupCompany(shopify, signupData.company, signupData.customer, signupData.address);
   }
-  await signupIndividual(shopify, signupData.customer, signupData.address);
+  return await signupIndividual(shopify, signupData.customer, signupData.address);
 }
 
 async function handler(request: Request, context: Context): Promise<Response> {
   const data = await request.json();
   const s = new ShopifyAdminAPI();
-  await processSignup(s, data);
-  return NetlifyResponse(200, 'OK');
+  return await processSignup(s, data);
 }
 
 export default async (request: Request, context: Context): Promise<Response> => {
-  return (await ErrorHandlerMiddleware(EnvCheckMiddleware(AuthMiddleware(Promise.resolve(handler)))))(request, context);
+  return (await CORSMiddleware(ErrorHandlerMiddleware(EnvCheckMiddleware(AuthMiddleware(Promise.resolve(handler))))))(request, context);
 }
 
 export const config: Config = {
   path: '/signup',
-  method: 'POST',
+  method: ['POST', 'OPTIONS'],
 };
