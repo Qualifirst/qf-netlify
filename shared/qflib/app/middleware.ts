@@ -35,3 +35,17 @@ export async function EnvCheckMiddleware(handler: Promise<NetlifyFunction>): Pro
         return await (await handler)(request, context);
     }
 }
+
+export async function CORSMiddleware(handler: Promise<NetlifyFunction>): Promise<NetlifyFunction> {
+    return async (request: Request, context: Context): Promise<Response> => {
+        if (request.method === "OPTIONS") {
+            return NetlifyResponse(200, '', {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': '*',
+            });
+        }
+        const response = await (await handler)(request, context);
+        response.headers.set('Access-Control-Allow-Origin', '*');
+        return response;
+    }
+}
